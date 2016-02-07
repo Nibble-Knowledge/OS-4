@@ -1,7 +1,7 @@
 #TODO - figure out which values correspond to what (read, write, which perif, etc)
 #       Do the buffer counter stuff
 #       Do we want to update audio/vga together or spereately?
-
+#       What to send to vga?
 
 #The core of the basic os right now written in macro assembly 
 #Loops waiting for ready from the keyboard to recieve a key stroke-
@@ -76,7 +76,7 @@ AUDIO_OUT:
     JMP AUDIO_OUT.RET
 
 
-#Output to the screen
+#Output to the screen - TODO figure out how i have to send, if it needs the char or the ps/2 code or what
 VGA_OUT:
     #Update the audio then update the screen
     LOD N_[0]
@@ -89,8 +89,16 @@ VGA_OUT:
     NOP
     #TODO fix this part since i know this doesnt work
     ADD BUFFER_COUNT N_[1] INTO TEMP
-    MOV BUFFER[BUFFER_COUNT] INTO *DATA_BUS[0]
-    MOV BUFFER[TEMP] INTO *DATA_BUS[1]
+
+    #Send first half of character
+    MOV N_[0b1000] INTO *STATUS_BUS
+    MOV BUFFER[BUFFER_COUNT] INTO *DATA_BUS
+    MOV N_[0b0000] INTO *STATUS_BUS
+
+    #Send second half
+    MOV N_[0b1000] INTO *STATUS_BUS
+    MOV BUFFER[TEMP] INTO *DATA_BUS
+    MOV N_[0b0000] INTO *STATUS_BUS
 
     #Remove a value from counter when a succesful write to vga happens
     SUB BUFFER_COUNT N[1] INTO BUFFER_COUNT
@@ -98,13 +106,12 @@ VGA_OUT:
     JMP MAIN
 
 
-
-AUDIO: .data 1 0b0001
-KEYB: .data 1 0b0010
-VGA: .data 1 0b0011
-
+#These values are all subject to change as im not 100% sure this is right
+AUDIO: .data 1 0b0000
+KEYB: .data 1 0b0001
+VGA: .data 1 0b0010
 READOUT: .data 1 0b0101
-WRITEOUT: .data 1 0b1001
+WRITEOUT: .data 1 0b1001    
 READLOW: .data 1 0b0001
 READY: .data 1 0b0111
 
@@ -112,9 +119,6 @@ RESULT: .data 1 0x0
 
 BUFFER: .data 16 0x0000000000000000
 BUFFER_COUNT: .data 1 0x0
-
-CURRENT: .data 1 0x0
-
 TEMP: .data 1 0
 
 #not sure if this is needed yet
